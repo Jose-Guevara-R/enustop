@@ -118,7 +118,9 @@ export const State1YanKenPoModal: React.FC<YanKenPoModalProps> = ({
             ) : (
               <div className="flex items-center justify-center gap-6 py-2">
                 <div className="text-center">
-                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">Tú ({roomState[effectiveSlot].name})</div>
+                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
+                    Tú ({effectiveSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'})
+                  </div>
                   <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl transition-all duration-200 shadow-sm ${
                     myChoice
                       ? 'bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-950 dark:to-amber-900 border-amber-400 dark:border-amber-600 scale-105 shadow-md shadow-amber-500/20 ring-2 ring-amber-400/40'
@@ -134,7 +136,9 @@ export const State1YanKenPoModal: React.FC<YanKenPoModalProps> = ({
                 <div className="font-display font-black text-xl text-zinc-400 dark:text-zinc-600">VS</div>
 
                 <div className="text-center">
-                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">Rival ({roomState[rivalSlot].name})</div>
+                  <div className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-1.5">
+                    Rival ({rivalSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'})
+                  </div>
                   <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center text-3xl transition-all duration-200 shadow-sm ${
                     rivalChoice
                       ? 'bg-gradient-to-br from-zinc-200 to-zinc-300 dark:from-zinc-700 dark:to-zinc-800 border-zinc-400 dark:border-zinc-600'
