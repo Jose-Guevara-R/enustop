@@ -1,0 +1,6 @@
+{
+  "name": "Encuentra el Número y Detente",
+  "description": "Juego competitivo multijugador síncrono en tiempo real para 2 jugadores con sincronización de servidor, resolución de latencia anti-trampas y dinámica asimétrica.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
