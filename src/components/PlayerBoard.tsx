@@ -187,8 +187,8 @@ export const PlayerBoard: React.FC<PlayerBoardProps> = ({
             <div className="text-sm font-display font-extrabold text-white mb-0.5">
               Tablero Bloqueado
             </div>
-            <div className="text-xs text-zinc-300 max-w-[200px] leading-snug">
-              ¡Eres el Buscador! Rastrea el número en la nube para gritar <strong className="text-amber-400 font-bold">STOP</strong> y detener a tu rival.
+            <div className="text-xs text-zinc-300 max-w-[210px] leading-snug">
+              ¡Eres el Buscador! Rastrea el número en la nube y <strong className="text-amber-300 font-bold">haz clic sobre él</strong> (o en el botón rojo superior) para gritar <strong className="text-rose-400 font-bold">¡STOP!</strong>
             </div>
           </div>
         )}

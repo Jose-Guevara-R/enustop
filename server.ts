@@ -283,7 +283,7 @@ function executeTargetChosen(room: RoomInstance, targetNum: number) {
 
 function executeStopTrigger(room: RoomInstance, clickedNumber: number, stoppedBy: PlayerId, clientTimestamp: number) {
   if (room.state.state !== 'race') return;
-  if (clickedNumber !== room.state.targetNumber) return;
+  if (Number(clickedNumber) !== Number(room.state.targetNumber)) return;
 
   const serverTimeStop = Date.now();
   room.state.timeStop = serverTimeStop;
@@ -596,7 +596,7 @@ wss.on('connection', (ws: WebSocket) => {
         // Strictly verify that only the Searcher can hit STOP!
         if (room.state[slot].role !== 'searcher') return;
 
-        executeStopTrigger(room, action.number, slot, action.clientTimestamp);
+        executeStopTrigger(room, Number(action.number), slot, action.clientTimestamp);
         return;
       }
 

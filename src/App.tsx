@@ -104,17 +104,22 @@ export default function App() {
         }
       }
 
-      // Spacebar for marking sequential cells in Race
-      if (e.code === 'Space') {
-        if (roomState.state === 'race') {
-          const effectiveSlot: PlayerId = mySlot === 'spectator' ? 'player1' : mySlot;
-          if (roomState[effectiveSlot].role === 'marker') {
-            e.preventDefault();
-            const currentScore = roomState[effectiveSlot].score;
-            if (currentScore < 48) {
-              handleMarkCell(currentScore);
-            }
+      // Keyboard actions in Race (Space for Marker, Space/Enter/S for Searcher STOP)
+      if (roomState.state === 'race') {
+        const effectiveSlot: PlayerId = mySlot === 'spectator' ? 'player1' : mySlot;
+        if (roomState[effectiveSlot].role === 'marker' && e.code === 'Space') {
+          e.preventDefault();
+          const currentScore = roomState[effectiveSlot].score;
+          if (currentScore < 48) {
+            handleMarkCell(currentScore);
           }
+        } else if (
+          roomState[effectiveSlot].role === 'searcher' &&
+          (e.code === 'Space' || e.key === 'Enter' || e.key === 's' || e.key === 'S') &&
+          roomState.targetNumber
+        ) {
+          e.preventDefault();
+          handleHitStop(Number(roomState.targetNumber));
         }
       }
 

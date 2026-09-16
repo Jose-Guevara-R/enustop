@@ -387,7 +387,7 @@ export function useGameSync(initialRoomId: string = 'ALFA') {
     const slot = overrideSlot || (mySlot === 'spectator' ? 'player1' : mySlot);
     if (roomState.state !== 'race') return;
     if (roomState[slot].role !== 'searcher') return;
-    if (number !== roomState.targetNumber) return;
+    if (Number(number) !== Number(roomState.targetNumber)) return;
 
     const stopTime = Date.now();
     soundManager.playDeskBell();

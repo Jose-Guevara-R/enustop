@@ -31,15 +31,19 @@ export const CentralCloud: React.FC<CentralCloudProps> = ({
 
   const availableCount = roomState.cloud.filter((c) => c.status === 'available').length;
 
+  const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null);
+
   const handleChipClick = (id: number, status: 'available' | 'used') => {
     if (status === 'used') return;
 
     if (isMarkerInChoose) {
       onChooseTarget(id);
     } else if (isSearcherInRace) {
-      // In race, clicking any chip could be checked or clicking the right target triggers STOP!
-      if (id === targetNumber) {
-        onHitStop(id);
+      if (Number(id) === Number(targetNumber)) {
+        onHitStop(Number(id));
+      } else {
+        setFeedbackMessage(`¡Ese es el ${id}! Busca el ${targetNumber}`);
+        setTimeout(() => setFeedbackMessage(null), 1500);
       }
     }
   };
@@ -77,23 +81,36 @@ export const CentralCloud: React.FC<CentralCloudProps> = ({
             </motion.div>
           )}
 
-          {/* STATE 3: Searcher GIANT RED BANNER */}
+          {/* STATE 3: Searcher GIANT RED BANNER (CLICKABLE STOP TRIGGER) */}
           {isSearcherInRace && (
-            <motion.div
+            <motion.button
               key="searcher-banner"
-              initial={{ scale: 0.92, opacity: 0 }}
-              animate={{ scale: [1, 1.015, 1], opacity: 1 }}
-              transition={{ repeat: Infinity, duration: 1.2 }}
-              className="w-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black py-3.5 px-6 rounded-2xl shadow-xl shadow-red-500/30 text-center text-lg md:text-xl tracking-wide flex items-center justify-center gap-3 border-2 border-red-400/80"
+              id="searcher-stop-banner-btn"
+              onClick={() => {
+                if (targetNumber) onHitStop(Number(targetNumber));
+              }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full cursor-pointer bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black py-3 px-5 rounded-2xl shadow-xl shadow-red-500/30 text-center flex flex-col items-center justify-center gap-1 border-2 border-red-400/90 transition-transform"
             >
-              <Search className="w-6 h-6 animate-bounce" />
-              <span className="font-display font-extrabold uppercase">¡Busca el número:</span>
-              <span className="bg-white text-red-600 font-display font-black text-2xl md:text-3xl px-3.5 py-0.5 rounded-xl shadow-md tracking-wider">
-                {targetNumber}
-              </span>
-              <span className="font-display font-extrabold uppercase">!</span>
-              <Bell className="w-6 h-6 animate-pulse" />
-            </motion.div>
+              <div className="flex items-center justify-center gap-2.5 text-base md:text-xl">
+                <Search className="w-5 h-5 md:w-6 md:h-6 animate-bounce" />
+                <span className="font-display font-extrabold uppercase">¡BUSCA EL NÚMERO:</span>
+                <span className="bg-white text-red-600 font-display font-black text-2xl md:text-3xl px-3.5 py-0.5 rounded-xl shadow-md tracking-wider">
+                  {targetNumber}
+                </span>
+                <span className="font-display font-extrabold uppercase">!</span>
+                <Bell className="w-6 h-6 animate-pulse text-amber-300" />
+              </div>
+              <div className="text-xs md:text-sm font-bold text-red-100/90 flex items-center gap-1.5">
+                <span>👉 Toca el {targetNumber} en la nube o pulsa aquí para ¡DETENER / STOP! 🛑</span>
+              </div>
+              {feedbackMessage && (
+                <div className="text-xs font-black text-amber-300 bg-black/40 px-3 py-1 rounded-full animate-bounce mt-1">
+                  {feedbackMessage}
+                </div>
+              )}
+            </motion.button>
           )}
 
           {/* STATE 3: Marker Locked Notice */}
