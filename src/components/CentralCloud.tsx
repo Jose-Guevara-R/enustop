@@ -164,7 +164,6 @@ export const CentralCloud: React.FC<CentralCloudProps> = ({
         {/* 35 Number Chips */}
         {roomState.cloud.map((chip) => {
           const isUsed = chip.status === 'used';
-          const isTargetInRace = gameState === 'race' && chip.id === targetNumber;
           const isInteractiveForMe =
             (isMarkerInChoose && !isUsed) ||
             (isSearcherInRace && !isUsed);
@@ -185,10 +184,8 @@ export const CentralCloud: React.FC<CentralCloudProps> = ({
               className={`absolute w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center font-display font-black text-sm sm:text-base md:text-lg select-none transition-all duration-200 ${
                 isUsed
                   ? 'bg-zinc-200/80 dark:bg-zinc-800/50 text-zinc-400 dark:text-zinc-600 opacity-40 cursor-not-allowed scale-90 border border-zinc-300/40 dark:border-zinc-700/40'
-                  : isInteractiveForMe
-                  ? 'bg-gradient-to-b from-white via-amber-50/50 to-amber-100/60 dark:from-zinc-800 dark:to-zinc-900 text-zinc-900 dark:text-zinc-100 border-2 border-amber-500 shadow-md shadow-amber-500/25 cursor-pointer ring-3 ring-amber-400/40'
-                  : 'bg-white/95 dark:bg-zinc-800/95 text-zinc-850 dark:text-zinc-100 border border-zinc-300 dark:border-zinc-700/80 shadow-xs cursor-default'
-              } ${isTargetInRace && isSearcherInRace ? 'animate-pulse-ring !border-red-500 !ring-4 !ring-red-400/60' : ''}`}
+                  : 'bg-white/95 dark:bg-zinc-800/95 text-zinc-900 dark:text-zinc-100 border-2 border-amber-500/40 dark:border-amber-500/30 shadow-xs'
+              } ${isInteractiveForMe && !isUsed ? 'hover:border-amber-500 hover:shadow-md hover:scale-110 cursor-pointer active:scale-95' : 'cursor-default'}`}
             >
               <span className="relative z-10 leading-none">{chip.id}</span>
 
