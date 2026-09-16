@@ -477,8 +477,10 @@ wss.on('connection', (ws: WebSocket) => {
 
         if (slot !== 'spectator') {
           room.state[slot].connected = true;
-          if (action.playerName) {
+          if (action.playerName && action.playerName !== 'Jugador 1' && action.playerName !== 'Jugador 2') {
             room.state[slot].name = action.playerName;
+          } else {
+            room.state[slot].name = slot === 'player1' ? 'Jugador 1' : 'Jugador 2';
           }
         }
 

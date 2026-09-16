@@ -88,7 +88,6 @@ export function useGameSync(initialRoomId: string = 'ALFA') {
             JSON.stringify({
               type: 'JOIN_ROOM',
               roomId: roomId,
-              playerName: mySlot === 'player1' ? 'Jugador 1' : 'Jugador 2',
               preferredSlot: mySlot,
             })
           );
