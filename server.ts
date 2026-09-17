@@ -90,6 +90,21 @@ function getOrCreateRoom(roomId: string, isBotGame: boolean = false): RoomInstan
 }
 
 function broadcastRoomState(room: RoomInstance) {
+  // Purge any closed or broken sockets
+  for (const client of Array.from(room.clients)) {
+    if (client.ws.readyState !== WebSocket.OPEN) {
+      room.clients.delete(client);
+    }
+  }
+
+  // Synchronize connected status strictly from active client connections
+  const hasP1 = Array.from(room.clients).some(c => c.slot === 'player1');
+  const hasP2 = Array.from(room.clients).some(c => c.slot === 'player2');
+  room.state.player1.connected = hasP1;
+  if (!room.state.isBotGame) {
+    room.state.player2.connected = hasP2;
+  }
+
   for (const client of room.clients) {
     if (client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(
@@ -463,20 +478,68 @@ wss.on('connection', (ws: WebSocket) => {
         const roomId = (action.roomId || 'DEFAULT').toUpperCase();
         const room = getOrCreateRoom(roomId, false);
 
-        // Determine player slot
+        // Purge closed or dead sockets
+        for (const c of Array.from(room.clients)) {
+          if (c.ws.readyState !== WebSocket.OPEN) {
+            room.clients.delete(c);
+          }
+        }
+
+        // Check if this ws was already registered in the room
+        const existing = Array.from(room.clients).find((c) => c.ws === ws);
+
+        // Active rival clients on other sockets
+        const rivalP1 = Array.from(room.clients).find((c) => c.ws !== ws && c.slot === 'player1');
+        const rivalP2 = Array.from(room.clients).find((c) => c.ws !== ws && c.slot === 'player2');
+
         let slot: PlayerId | 'spectator' = 'spectator';
-        if (action.preferredSlot === 'player1' && !room.state.player1.connected) {
-          slot = 'player1';
-        } else if (action.preferredSlot === 'player2' && !room.state.player2.connected) {
-          slot = 'player2';
-        } else if (!room.state.player1.connected) {
-          slot = 'player1';
-        } else if (!room.state.player2.connected) {
-          slot = 'player2';
+
+        if (action.preferredSlot === 'player2') {
+          if (!rivalP2) {
+            slot = 'player2';
+          } else if (!rivalP1) {
+            // Rival was player2: auto-swap rival to player1 so this player gets player2
+            rivalP2.slot = 'player1';
+            slot = 'player2';
+          } else {
+            slot = 'spectator';
+          }
+        } else if (action.preferredSlot === 'player1') {
+          if (!rivalP1) {
+            slot = 'player1';
+          } else if (!rivalP2) {
+            // Rival was player1: auto-swap rival to player2 so this player gets player1
+            rivalP1.slot = 'player2';
+            slot = 'player1';
+          } else {
+            slot = 'spectator';
+          }
+        } else {
+          // No explicit preference: pick free slot without displacing
+          if (!rivalP1) {
+            slot = 'player1';
+          } else if (!rivalP2) {
+            slot = 'player2';
+          } else {
+            slot = 'spectator';
+          }
+        }
+
+        if (existing) {
+          existing.roomId = roomId;
+          existing.slot = slot;
+          clientConn = existing;
+        } else {
+          clientConn = {
+            ws,
+            roomId,
+            slot,
+            playerId: Math.random().toString(36).substring(2, 9),
+          };
+          room.clients.add(clientConn);
         }
 
         if (slot !== 'spectator') {
-          room.state[slot].connected = true;
           if (action.playerName && action.playerName !== 'Jugador 1' && action.playerName !== 'Jugador 2') {
             room.state[slot].name = action.playerName;
           } else {
@@ -484,24 +547,38 @@ wss.on('connection', (ws: WebSocket) => {
           }
         }
 
-        clientConn = {
-          ws,
-          roomId,
-          slot,
-          playerId: Math.random().toString(36).substring(2, 9),
-        };
-        room.clients.add(clientConn);
+        broadcastRoomState(room);
+        return;
+      }
 
-        // Auto-start if both players connected and in lobby
-        if (
-          room.state.state === 'lobby' &&
-          room.state.player1.connected &&
-          room.state.player2.connected
-        ) {
-          room.state.state = 'rps';
+      if (action.type === 'SWITCH_SLOT') {
+        if (!clientConn) return;
+        const room = rooms.get(clientConn.roomId);
+        if (!room) return;
+
+        const targetSlot: PlayerId = action.slot;
+        const rivalSlot: PlayerId = targetSlot === 'player1' ? 'player2' : 'player1';
+
+        // Find rival currently occupying targetSlot
+        const rivalClient = Array.from(room.clients).find(
+          (c) => c.ws !== ws && c.slot === targetSlot && c.ws.readyState === WebSocket.OPEN
+        );
+
+        if (rivalClient) {
+          // Automatic mutual swap!
+          rivalClient.slot = rivalSlot;
+          room.state[rivalSlot].name = rivalSlot === 'player1' ? 'Jugador 1' : 'Jugador 2';
         }
 
+        clientConn.slot = targetSlot;
+        room.state[targetSlot].name = targetSlot === 'player1' ? 'Jugador 1' : 'Jugador 2';
+
         broadcastRoomState(room);
+        broadcastEvent(room, {
+          type: 'SLOT_SWAPPED',
+          newSlot: targetSlot,
+          message: `Puestos actualizados: ${targetSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'}`,
+        });
         return;
       }
 
@@ -648,14 +725,7 @@ wss.on('connection', (ws: WebSocket) => {
       const room = rooms.get(clientConn.roomId);
       if (room) {
         room.clients.delete(clientConn);
-        if (clientConn.slot === 'player1' || clientConn.slot === 'player2') {
-          // Check if any other client is on that slot
-          const stillConnected = Array.from(room.clients).some((c) => c.slot === clientConn?.slot);
-          if (!stillConnected && !room.state.isBotGame) {
-            room.state[clientConn.slot].connected = false;
-            broadcastRoomState(room);
-          }
-        }
+        broadcastRoomState(room);
       }
     }
   });

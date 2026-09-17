@@ -119,31 +119,54 @@ export function useGameSync(initialRoomId: string = 'ALFA', initialSlot: PlayerI
       if (!data || !data.type) return;
 
       if (data.type === 'BC_HELLO') {
-        const otherSlot = data.slot as PlayerId;
+        const incomingSlot = data.slot as PlayerId;
         setRivalDisconnected(false);
+
+        // If the incoming tab has the same slot as me, assign it the opposite slot!
+        const assignedSlotForOther: PlayerId = (incomingSlot === mySlot)
+          ? (mySlot === 'player1' ? 'player2' : 'player1')
+          : incomingSlot;
+
         setRoomState(prev => {
+          const myKey = mySlot === 'spectator' ? 'player1' : mySlot;
           const next = {
             ...prev,
-            [otherSlot]: { ...prev[otherSlot], connected: true },
+            [myKey]: { ...prev[myKey], connected: true },
+            [assignedSlotForOther]: { ...prev[assignedSlotForOther], connected: true },
           };
           bc.postMessage({
             type: 'BC_WELCOME',
             slot: mySlot,
+            assignSlot: assignedSlotForOther,
             state: next,
           });
           return next;
         });
       } else if (data.type === 'BC_WELCOME') {
-        const otherSlot = data.slot as PlayerId;
         setRivalDisconnected(false);
+        if (data.assignSlot && data.assignSlot !== mySlot) {
+          setMySlot(data.assignSlot);
+          showNotification(`Asignado automáticamente como ${data.assignSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'}`, 2500);
+        }
         setRoomState(prev => {
-          const slotKey = mySlot === 'spectator' ? 'player1' : mySlot;
+          const actualSlot = data.assignSlot || (mySlot === 'spectator' ? 'player1' : mySlot);
+          const otherSlot = data.slot as PlayerId;
           return {
             ...data.state,
-            [slotKey]: { ...prev[slotKey], connected: true },
+            [actualSlot]: { ...data.state[actualSlot], connected: true },
             [otherSlot]: { ...data.state[otherSlot], connected: true },
           };
         });
+      } else if (data.type === 'BC_SWAP_SLOTS') {
+        // Rival picked data.senderSlot, so this tab automatically switches to data.receiverSlot!
+        setRivalDisconnected(false);
+        setMySlot(data.receiverSlot);
+        setRoomState(prev => ({
+          ...prev,
+          [data.senderSlot]: { ...prev[data.senderSlot], connected: true },
+          [data.receiverSlot]: { ...prev[data.receiverSlot], connected: true },
+        }));
+        showNotification(`El rival eligió ${data.senderSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'}. Pasaste automáticamente a ${data.receiverSlot === 'player1' ? 'Jugador 1' : 'Jugador 2'}.`, 3000);
       } else if (data.type === 'BC_STATE') {
         if (data.originSlot !== mySlot) {
           if (data.sound === 'stop') soundManager.playDeskBell();
@@ -221,7 +244,12 @@ export function useGameSync(initialRoomId: string = 'ALFA', initialSlot: PlayerI
             switch (data.type) {
               case 'ROOM_STATE':
                 setRoomState(data.state);
-                if (data.yourSlot) setMySlot(data.yourSlot);
+                if (data.yourSlot && data.yourSlot !== 'spectator') {
+                  setMySlot(data.yourSlot);
+                }
+                break;
+              case 'SLOT_SWAPPED':
+                showNotification(data.message, 2500);
                 break;
               case 'RPS_TIE':
                 soundManager.playTie();
@@ -719,12 +747,22 @@ export function useGameSync(initialRoomId: string = 'ALFA', initialSlot: PlayerI
 
   const switchRoleSlot = useCallback((slot: PlayerId) => {
     setMySlot(slot);
+    const oppositeSlot: PlayerId = slot === 'player1' ? 'player2' : 'player1';
     if (connected) {
-      sendAction({ type: 'JOIN_ROOM', roomId, preferredSlot: slot });
+      sendAction({ type: 'SWITCH_SLOT', slot });
     } else if (bcRef.current) {
-      bcRef.current.postMessage({ type: 'BC_HELLO', slot });
+      bcRef.current.postMessage({
+        type: 'BC_SWAP_SLOTS',
+        senderSlot: slot,
+        receiverSlot: oppositeSlot,
+      });
+      setRoomState(prev => ({
+        ...prev,
+        [slot]: { ...prev[slot], connected: true },
+        [oppositeSlot]: { ...prev[oppositeSlot], connected: true },
+      }));
     }
-  }, [connected, roomId, sendAction]);
+  }, [connected, sendAction]);
 
   return {
     roomId, setRoomId,

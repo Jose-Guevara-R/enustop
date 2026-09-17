@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   const openSecondTab = () => {
     const url = new URL(window.location.href);
     url.searchParams.set('room', roomId);
-    url.searchParams.set('slot', 'player2');
+    url.searchParams.set('slot', mySlot === 'player1' ? 'player2' : 'player1');
     window.open(url.toString(), '_blank');
   };
 

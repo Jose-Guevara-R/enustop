@@ -87,6 +87,7 @@ export interface GameRoomState {
 
 export type ClientAction =
   | { type: 'JOIN_ROOM'; roomId: string; playerName?: string; preferredSlot?: PlayerId }
+  | { type: 'SWITCH_SLOT'; slot: PlayerId }
   | { type: 'START_GAME'; isBotGame?: boolean; botDifficulty?: BotDifficulty }
   | { type: 'RPS_PICK'; choice: 'rock' | 'paper' | 'scissors' }
   | { type: 'CHOOSE_TARGET'; number: number }
@@ -99,6 +100,7 @@ export type ClientAction =
 
 export type ServerMessage =
   | { type: 'ROOM_STATE'; state: GameRoomState; yourSlot: PlayerId | 'spectator' }
+  | { type: 'SLOT_SWAPPED'; newSlot: PlayerId; message: string }
   | { type: 'RPS_TIE'; p1Choice: RpsChoice; p2Choice: RpsChoice; message: string }
   | { type: 'RPS_WIN'; winner: PlayerId; p1Choice: RpsChoice; p2Choice: RpsChoice }
   | { type: 'TARGET_CHOSEN'; targetNumber: number; marker: PlayerId; searcher: PlayerId }
