@@ -82,9 +82,11 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
       {/* Hero */}
       <div className="text-center max-w-2xl mb-8 flex flex-col items-center">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-red-600 flex items-center justify-center text-white font-display font-black text-3xl sm:text-4xl shadow-xl ring-4 ring-amber-400/40 mb-4 select-none">
-          🔢
-        </div>
+        <img
+          src="/logo.png"
+          alt="NumSTOP logo"
+          className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover shadow-xl ring-4 ring-amber-400/30 mb-4 select-none"
+        />
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-xs font-black tracking-wider uppercase mb-3">
           <Sparkles className="w-4 h-4 text-amber-600" />
           <span>¡Duelo de Agilidad Mental y Reflejos!</span>
@@ -181,20 +183,34 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
               </button>
             </div>
 
-            {/* Slot selector */}
+            {/* Slot selector — auto-asigna el contrario */}
             <div className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">Tu puesto:</div>
             <div className="grid grid-cols-2 gap-2.5 mb-5">
-              {(['player1', 'player2'] as PlayerId[]).map(slot => (
-                <button key={slot} onClick={() => onSwitchSlot(slot)}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                    mySlot === slot
-                      ? 'border-violet-500 bg-violet-600 text-white shadow-md scale-[1.02]'
-                      : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
-                  }`}>
-                  {slot === 'player1' ? 'Jugador 1' : 'Jugador 2'}
-                  {roomState[slot].connected && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />}
-                </button>
-              ))}
+              {(['player1', 'player2'] as PlayerId[]).map(slot => {
+                const oppositeSlot: PlayerId = slot === 'player1' ? 'player2' : 'player1';
+                const handleClick = () => {
+                  // Si ya soy este slot, no hacer nada
+                  if (mySlot === slot) return;
+                  // Elegir este slot; el otro jugador (si existe en otra pestaña) ya estará en el opuesto
+                  onSwitchSlot(slot);
+                  // Si el jugador actual estaba en el opuesto, liberar ese slot tomando el nuevo
+                  // (el servidor/BroadcastChannel lo propagará automáticamente)
+                };
+                return (
+                  <button key={slot} onClick={handleClick}
+                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      mySlot === slot
+                        ? 'border-violet-500 bg-violet-600 text-white shadow-md scale-[1.02]'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                    }`}>
+                    <span>{slot === 'player1' ? 'Jugador 1' : 'Jugador 2'}</span>
+                    {roomState[slot].connected && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />}
+                    {mySlot !== slot && roomState[oppositeSlot].connected && mySlot === oppositeSlot && (
+                      <span className="block text-[9px] text-violet-300 mt-0.5">← cambiar aquí</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Join different room */}
