@@ -1,247 +1,169 @@
 import React from 'react';
-import { Volume2, VolumeX, Moon, Sun, Keyboard, History, Copy, Check, Users, ExternalLink, Bot, LogOut } from 'lucide-react';
+import { Moon, Sun, Volume2, VolumeX, History, HelpCircle, LogOut, ExternalLink, Wifi, WifiOff } from 'lucide-react';
 import { GameState, PlayerId } from '../types.js';
-import { soundManager } from '../utils/audio.js';
+
+const STATE_STEPS = [
+  { key: 'rps',           num: '1', label: 'Duelo' },
+  { key: 'choose_number', num: '2', label: 'Elección' },
+  { key: 'race',          num: '3', label: 'Carrera' },
+  { key: 'stop',          num: '4', label: 'STOP' },
+] as const;
 
 interface HeaderProps {
   roomId: string;
   gameState: GameState;
   round: number;
+  darkMode: boolean;
+  onToggleDark: () => void;
+  isMuted: boolean;
+  onToggleMute: () => void;
+  onOpenHistory: () => void;
+  onOpenShortcuts: () => void;
+  onEndGame?: () => void;
   mySlot: PlayerId | 'spectator';
   onSwitchSlot: (slot: PlayerId) => void;
   connected: boolean;
-  isBotGame?: boolean;
-  darkMode: boolean;
-  onToggleDarkMode: () => void;
-  soundMuted: boolean;
-  onToggleSound: () => void;
-  onOpenShortcuts: () => void;
-  onOpenHistory: () => void;
-  onStartBotGame?: () => void;
-  onEndGame?: () => void;
+  isLocalMode: boolean;
+  reconnectAttempts: number;
+  rivalDisconnected: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  roomId,
-  gameState,
-  round,
-  mySlot,
-  onSwitchSlot,
-  connected,
-  isBotGame,
-  darkMode,
-  onToggleDarkMode,
-  soundMuted,
-  onToggleSound,
-  onOpenShortcuts,
-  onOpenHistory,
-  onStartBotGame,
-  onEndGame,
+  roomId, gameState, round, darkMode, onToggleDark,
+  isMuted, onToggleMute, onOpenHistory, onOpenShortcuts,
+  onEndGame, mySlot, onSwitchSlot, connected, isLocalMode,
+  reconnectAttempts, rivalDisconnected,
 }) => {
-  const [copied, setCopied] = React.useState(false);
+  const isInGame = gameState !== 'lobby' && gameState !== 'game_over';
 
-  const copyInviteLink = () => {
-    const url = window.location.origin + window.location.pathname + '?room=' + roomId;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const openSecondTab = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', roomId);
+    url.searchParams.set('slot', 'player2');
+    window.open(url.toString(), '_blank');
   };
-
-  const openSecondPlayerTab = () => {
-    const targetSlot = mySlot === 'player1' ? 'player2' : 'player1';
-    const url = `${window.location.origin}${window.location.pathname}?room=${roomId}&slot=${targetSlot}`;
-    window.open(url, '_blank');
-  };
-
-  const stateSteps: Array<{ key: GameState; label: string; num: string }> = [
-    { key: 'rps', label: 'Yan Ken Po', num: '1' },
-    { key: 'choose_number', label: 'Elección', num: '2' },
-    { key: 'race', label: 'La Carrera', num: '3' },
-    { key: 'stop', label: 'STOP / Timbre', num: '4' },
-  ];
 
   return (
-    <header className={`sticky top-0 z-40 w-full border-b backdrop-blur-md transition-colors ${
-      darkMode
-        ? 'bg-[#0E1322]/85 border-zinc-800/80 text-zinc-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)]'
-        : 'bg-white/90 border-zinc-200/80 text-zinc-800 shadow-xs'
+    <header className={`w-full px-3 py-2.5 flex items-center justify-between gap-2 border-b sticky top-0 z-40 ${
+      darkMode ? 'bg-[#0D1018]/95 border-zinc-800/80 backdrop-blur-xl' : 'bg-white/95 border-zinc-200/80 backdrop-blur-xl'
     }`}>
-      <div className="max-w-7xl mx-auto px-4 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3">
-        
-        {/* Title & Room Badge */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/logo.png"
-              alt="NumSTOP Logo"
-              className="w-10 h-10 rounded-xl shadow-md ring-2 ring-amber-400/40 object-cover select-none"
-            />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-display font-black text-lg md:text-xl tracking-tight leading-none text-slate-950 dark:text-white">
-                  NumSTOP!
-                </h1>
-                <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700">
-                  DUELO
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">
-                Agilidad Mental y Reflejos
-              </p>
-            </div>
+      {/* Left: Logo + Room */}
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="flex-shrink-0 flex flex-col">
+          <div className="flex items-center gap-1.5">
+            <span className="font-display font-black text-base text-zinc-900 dark:text-white tracking-tight">NumSTOP!</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">DUELO</span>
           </div>
-
-          {/* Room ID pill */}
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full text-xs border border-slate-200 dark:border-slate-700 shadow-xs">
-            <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-amber-500'}`} />
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] uppercase tracking-wider font-bold">Sala:</span>
-            <span className="font-mono font-black text-slate-900 dark:text-slate-100">{roomId}</span>
-            <button
-              id="copy-invite-btn"
-              onClick={copyInviteLink}
-              title="Copiar enlace de invitación"
-              className="p-1 hover:text-amber-600 dark:hover:text-amber-400 transition-colors cursor-pointer rounded-md hover:bg-slate-200 dark:hover:bg-slate-700"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+          <span className="text-[9px] text-zinc-500 dark:text-zinc-500 font-semibold hidden sm:block">Agilidad Mental y Reflejos</span>
         </div>
 
-        {/* 4-Step Cycle Indicator */}
-        <div className="flex items-center gap-1 sm:gap-2 text-xs font-medium">
-          {stateSteps.map((step) => {
+        {/* Room pill */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700/80 text-[10px] font-mono font-black text-zinc-700 dark:text-zinc-300">
+          <span className="text-zinc-400 dark:text-zinc-600 font-sans">Sala:</span>
+          <span>{roomId}</span>
+        </div>
+
+        {/* MEJORA: indicador de conexión */}
+        <div className={`hidden sm:flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+          connected ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40'
+          : isLocalMode ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40'
+          : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40'
+        }`}>
+          {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+          {connected ? 'Online' : isLocalMode ? 'Local' : `Recon. ${reconnectAttempts}/8`}
+        </div>
+
+        {/* MEJORA: aviso rival desconectado */}
+        {rivalDisconnected && (
+          <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 animate-pulse">
+            ⚠️ Rival desconectado
+          </div>
+        )}
+      </div>
+
+      {/* Center: state steps (only in-game) */}
+      {isInGame && (
+        <div className="hidden lg:flex items-center gap-1.5">
+          {STATE_STEPS.map(step => {
             const isActive = gameState === step.key;
             return (
-              <div
-                key={step.key}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/25 ring-2 ring-amber-400/40 scale-105'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  isActive ? 'bg-white text-amber-600 shadow-xs' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                }`}>
-                  {step.num}
-                </span>
-                <span className="hidden sm:inline font-bold">{step.label}</span>
+              <div key={step.key} className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold transition-all ${
+                isActive
+                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                  : 'text-zinc-400 dark:text-zinc-600'
+              }`}>
+                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black ${
+                  isActive ? 'bg-white/30' : 'bg-zinc-200 dark:bg-zinc-700'
+                }`}>{step.num}</span>
+                <span>{step.label}</span>
               </div>
             );
           })}
-          <div className="ml-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs">
-            Ronda {round}
+          <div className="ml-1 text-[10px] font-black text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+            R{round}
           </div>
         </div>
+      )}
 
-        {/* Player Switcher & Utility Actions */}
-        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-          
-          {/* WhatsApp share invite button */}
-          <a
-            id="whatsapp-share-btn"
-            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-              `¡Hola! Te invito a un duelo en NumSTOP! 🔢⚡ ¿Quién tiene mejores reflejos? Entra a jugar aquí: ${window.location.origin}${window.location.pathname}?room=${roomId}`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Compartir por WhatsApp para estudiantes"
-            className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-          >
-            <span className="text-sm leading-none">📱</span>
-            <span className="hidden lg:inline text-[11px]">WhatsApp</span>
-          </a>
-
-          {/* Slot switcher */}
-          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs shadow-xs">
-            <button
-              id="slot-p1-btn"
-              onClick={() => onSwitchSlot('player1')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                mySlot === 'player1'
-                  ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-sm shadow-purple-500/40 scale-[1.02]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              Jugador 1
-            </button>
-            <button
-              id="slot-p2-btn"
-              onClick={() => onSwitchSlot('player2')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                mySlot === 'player2'
-                  ? 'bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-sm shadow-emerald-500/40 scale-[1.02]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {isBotGame ? 'IA Rival' : 'Jugador 2'}
-            </button>
+      {/* Right: actions */}
+      <div className="flex items-center gap-1">
+        {/* Slot switcher */}
+        {isInGame && (
+          <div className="hidden sm:flex items-center gap-1 mr-1">
+            {(['player1', 'player2'] as PlayerId[]).map(slot => (
+              <button key={slot} onClick={() => onSwitchSlot(slot)}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                  mySlot === slot
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                }`}>
+                {slot === 'player1' ? 'J1' : 'J2'}
+              </button>
+            ))}
           </div>
+        )}
 
-          {/* Test 2nd player in new tab button */}
-          <button
-            id="open-rival-tab-btn"
-            onClick={openSecondPlayerTab}
-            title="Abrir Jugador 2 en otra pestaña para probar en tiempo real"
-            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-all flex items-center gap-1.5 text-xs font-semibold hover:border-amber-400 dark:hover:border-amber-500 cursor-pointer shadow-xs"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-amber-500" />
-            <span className="hidden lg:inline text-[11px]">2do Jugador</span>
+        {/* Open 2nd tab */}
+        {isInGame && (
+          <button onClick={openSecondTab} title="Abrir como Jugador 2 en nueva pestaña"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+            <ExternalLink className="w-4 h-4" />
           </button>
+        )}
 
-          {/* Toggle sound */}
-          <button
-            id="sound-toggle-btn"
-            onClick={onToggleSound}
-            title={soundMuted ? 'Activar Sonido (M)' : 'Silenciar Sonido (M)'}
-            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer shadow-xs"
-          >
-            {soundMuted ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-emerald-500" />}
-          </button>
+        {/* Mute */}
+        <button onClick={onToggleMute} title={isMuted ? 'Activar sonido' : 'Silenciar'}
+          className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </button>
 
-          {/* Toggle dark mode */}
-          <button
-            id="dark-mode-btn"
-            onClick={onToggleDarkMode}
-            title="Alternar Modo Oscuro (D)"
-            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer shadow-xs"
-          >
-            {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
-          </button>
+        {/* Dark mode */}
+        <button onClick={onToggleDark} title="Modo oscuro/claro"
+          className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
 
-          {/* History drawer button */}
-          <button
-            id="history-btn"
-            onClick={onOpenHistory}
-            title="Historial de Rondas"
-            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer shadow-xs"
-          >
+        {/* History */}
+        {isInGame && (
+          <button onClick={onOpenHistory} title="Historial de rondas (H)"
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
             <History className="w-4 h-4" />
           </button>
+        )}
 
-          {/* Shortcuts button */}
-          <button
-            id="shortcuts-btn"
-            onClick={onOpenShortcuts}
-            title="Atajos de teclado (?)"
-            className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-all cursor-pointer shadow-xs"
-          >
-            <Keyboard className="w-4 h-4" />
+        {/* Shortcuts */}
+        <button onClick={onOpenShortcuts} title="Atajos y reglas (?)"
+          className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+          <HelpCircle className="w-4 h-4" />
+        </button>
+
+        {/* End game */}
+        {isInGame && onEndGame && (
+          <button onClick={onEndGame} title="Terminar partida"
+            className="p-1.5 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer">
+            <LogOut className="w-4 h-4" />
           </button>
-
-          {/* Terminar Juego button (visible when game is active) */}
-          {gameState !== 'lobby' && onEndGame && (
-            <button
-              id="end-game-header-btn"
-              onClick={onEndGame}
-              title="Terminar la partida y volver al lobby"
-              className="ml-1 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800/70 font-display font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Terminar Juego</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </header>
   );
