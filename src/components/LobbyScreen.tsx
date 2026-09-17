@@ -108,7 +108,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
           <a href={`https://api.whatsapp.com/send?text=${whatsappMsg}`} target="_blank" rel="noopener noreferrer"
             className="px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md flex items-center gap-2 transition-all hover:scale-102 active:scale-95 cursor-pointer">
             <Share2 className="w-4 h-4" />
-            <span>Compartir con Estudiantes</span>
+            <span>Compartir con amigos</span>
           </a>
           {deferredPrompt && (
             <button onClick={handleInstallPWA}
